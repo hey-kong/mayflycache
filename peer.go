@@ -1,5 +1,7 @@
 package main
 
+import pb "github.com/hey-kong/mayflycache/mayflycachepb"
+
 // A PeerPicker interface uses a key to find the PeerGetter
 // according to the consistent hash algorithm.
 type PeerPicker interface {
@@ -8,5 +10,5 @@ type PeerPicker interface {
 
 // A PeerGetter interface is used to get the cached value from the group.
 type PeerGetter interface {
-	Get(group, key string) ([]byte, error)
+	Get(in *pb.Request, out *pb.Response) error
 }

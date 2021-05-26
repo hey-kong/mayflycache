@@ -10,6 +10,8 @@ import (
 	"sync"
 
 	"github.com/hey-kong/mayflycache/consistenthash"
+	pb "github.com/hey-kong/mayflycache/mayflycachepb"
+	"google.golang.org/protobuf/proto"
 )
 
 const (
@@ -68,8 +70,15 @@ func (hp *HTTPPool) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	// Write the value to the response body as a proto message
+	body, err := proto.Marshal(&pb.Response{Value: value.ByteSlice()})
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+
 	w.Header().Set("Content-Type", "application/octet-stream")
-	w.Write(value.ByteSlice())
+	w.Write(body)
 }
 
 // Set delays the assignment of peers and httpGetters.
@@ -105,27 +114,31 @@ type httpGetter struct {
 
 // Get uses baseURL, group and key to splice request URL,
 // and calls http.Get to get data from a group.
-func (hp *httpGetter) Get(group, key string) ([]byte, error) {
+func (hp *httpGetter) Get(in *pb.Request, out *pb.Response) error {
 	u := fmt.Sprintf(
 		"%v%v/%v",
 		hp.baseURL,
-		url.QueryEscape(group),
-		url.QueryEscape(key),
+		url.QueryEscape(in.GetGroup()),
+		url.QueryEscape(in.GetKey()),
 	)
 	res, err := http.Get(u)
 	if err != nil {
-		return nil, err
+		return err
 	}
 	defer res.Body.Close()
 
 	if res.StatusCode != http.StatusOK {
-		return nil, fmt.Errorf("Server returned: %v\n", res.Status)
+		return fmt.Errorf("Server returned: %v\n", res.Status)
 	}
 
 	bytes, err := ioutil.ReadAll(res.Body)
 	if err != nil {
-		return nil, fmt.Errorf("error when reading response body: %v", err)
+		return fmt.Errorf("error when reading response body: %v", err)
 	}
 
-	return bytes, nil
+	if err = proto.Unmarshal(bytes, out); err != nil {
+		return fmt.Errorf("decoding response body: %v", err)
+	}
+
+	return nil
 }
