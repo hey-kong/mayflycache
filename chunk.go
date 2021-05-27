@@ -1,4 +1,4 @@
-package chunk
+package main
 
 // Chunk implements the Value interface, as the value
 // of the key-value entry in the cache, it's read-only.

@@ -5,7 +5,6 @@ import (
 	"log"
 	"sync"
 
-	"github.com/hey-kong/mayflycache/chunk"
 	pb "github.com/hey-kong/mayflycache/mayflycachepb"
 )
 
@@ -21,8 +20,8 @@ func (f GetterFunc) Get(key string) ([]byte, error) {
 
 type Group struct {
 	name      string
-	getter    Getter
 	mainCache *SafeCache
+	getter    Getter
 	peers     PeerPicker
 	once      Once
 }
@@ -44,8 +43,8 @@ func NewGroup(name string, cacheBytes int64, getter Getter) *Group {
 
 	g := &Group{
 		name:      name,
-		getter:    getter,
 		mainCache: &SafeCache{maxBytes: cacheBytes},
+		getter:    getter,
 	}
 	groups[name] = g
 	return g
@@ -54,7 +53,7 @@ func NewGroup(name string, cacheBytes int64, getter Getter) *Group {
 // RegisterPeers registers PeerPicker of the Group.
 func (g *Group) RegisterPeers(peers PeerPicker) {
 	if g.peers != nil {
-		panic("RegisterPeers called more then once")
+		panic("RegisterPeers called more than once")
 	}
 	g.peers = peers
 }
@@ -69,10 +68,10 @@ func GetGroup(name string) *Group {
 
 // It tries to get the cached data from its mainCache;
 // If not, call g.load to use Getter or get data from peer node.
-func (g *Group) Get(key string) (chunk.Chunk, error) {
+func (g *Group) Get(key string) (Chunk, error) {
 	// Null key is handled here to prevent cache penetration
 	if key == "" {
-		return chunk.Chunk{}, fmt.Errorf("key is required")
+		return Chunk{}, fmt.Errorf("key is required")
 	}
 	// Try to get a cached chunk, and return it if you get it
 	if v, ok := g.mainCache.Get(key); ok {
@@ -85,8 +84,8 @@ func (g *Group) Get(key string) (chunk.Chunk, error) {
 
 // If its peers is nil，call getLocally to get;
 // Else call peers.PickPeer to get peer node, and call getFromPeer to get data from remote.
-func (g *Group) load(key string) (value chunk.Chunk, err error) {
-	tmpValue, err := g.once.Do(key, func() (chunk.Chunk, error) {
+func (g *Group) load(key string) (value Chunk, err error) {
+	tmpValue, err := g.once.Do(key, func() (interface{}, error) {
 		if g.peers != nil {
 			if peer, ok := g.peers.PickPeer(key); ok {
 				if value, err = g.getFromPeer(peer, key); err == nil {
@@ -97,10 +96,14 @@ func (g *Group) load(key string) (value chunk.Chunk, err error) {
 		}
 		return g.getLocally(key)
 	})
-	return tmpValue, err
+
+	if err == nil {
+		return tmpValue.(Chunk), nil
+	}
+	return
 }
 
-func (g *Group) getFromPeer(peer PeerGetter, key string) (chunk.Chunk, error) {
+func (g *Group) getFromPeer(peer PeerGetter, key string) (Chunk, error) {
 	req := &pb.Request{
 		Group: g.name,
 		Key:   key,
@@ -108,23 +111,23 @@ func (g *Group) getFromPeer(peer PeerGetter, key string) (chunk.Chunk, error) {
 	res := &pb.Response{}
 	err := peer.Get(req, res)
 	if err != nil {
-		return chunk.Chunk{}, err
+		return Chunk{}, err
 	}
-	return chunk.NewChunk(res.Value), nil
+	return NewChunk(res.Value), nil
 }
 
-func (g *Group) getLocally(key string) (value chunk.Chunk, err error) {
+func (g *Group) getLocally(key string) (value Chunk, err error) {
 	// Call getter to get data
 	bytes, err := g.getter.Get(key)
 	if err != nil {
 		return
 	}
 	// Save the data to the chunk and cache it
-	value = chunk.NewChunk(bytes)
+	value = NewChunk(bytes)
 	g.populateCache(key, value)
 	return value, nil
 }
 
-func (g *Group) populateCache(key string, value chunk.Chunk) {
+func (g *Group) populateCache(key string, value Chunk) {
 	g.mainCache.Set(key, value)
 }

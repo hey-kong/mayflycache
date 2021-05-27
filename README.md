@@ -1,6 +1,6 @@
 # mayflycache
 
-mayflycache is a simple implementation of a distributed caching and cache-filling library, with reference to groupcache.
+mayflycache is a simple implementation of a distributed caching and cache-filling library, inspired by groupcache.
 
 ## Features
 

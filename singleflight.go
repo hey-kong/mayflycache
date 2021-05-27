@@ -2,8 +2,6 @@ package main
 
 import (
 	"sync"
-
-	"github.com/hey-kong/mayflycache/chunk"
 )
 
 type Once struct {
@@ -14,11 +12,11 @@ type Once struct {
 // A call is used to handle the function call corresponding to the string in Once.
 type call struct {
 	wg  sync.WaitGroup // there may be multiple function calls waiting for the same result
-	val chunk.Chunk    // the value returned by the function call
+	val interface{}    // the value returned by the function call
 	err error
 }
 
-func (o *Once) Do(key string, fn func() (chunk.Chunk, error)) (chunk.Chunk, error) {
+func (o *Once) Do(key string, fn func() (interface{}, error)) (interface{}, error) {
 	o.mu.Lock()
 	if o.m == nil {
 		o.m = make(map[string]*call)

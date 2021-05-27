@@ -3,7 +3,6 @@ package main
 import (
 	"sync"
 
-	"github.com/hey-kong/mayflycache/chunk"
 	"github.com/hey-kong/mayflycache/lru"
 )
 
@@ -15,7 +14,7 @@ type SafeCache struct {
 }
 
 // Get locks and unlocks when the it exits to ensure concurrency security.
-func (c *SafeCache) Get(key string) (value chunk.Chunk, done bool) {
+func (c *SafeCache) Get(key string) (value Chunk, done bool) {
 	c.mu.Lock()
 	defer c.mu.Unlock()
 
@@ -23,13 +22,13 @@ func (c *SafeCache) Get(key string) (value chunk.Chunk, done bool) {
 		return
 	}
 	if v, ok := c.lru.Get(key); ok {
-		value, done = v.(chunk.Chunk), ok
+		value, done = v.(Chunk), ok
 	}
 	return
 }
 
 // Set locks and unlocks when the it exits to ensure concurrency security.
-func (c *SafeCache) Set(key string, value chunk.Chunk) {
+func (c *SafeCache) Set(key string, value Chunk) {
 	c.mu.Lock()
 	defer c.mu.Unlock()
 
