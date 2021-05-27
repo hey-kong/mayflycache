@@ -15,7 +15,7 @@ import (
 )
 
 const (
-	defaultBasePath = "/mayflycache/"
+	defaultBasePath = "/_mayflycache/"
 	defaultReplicas = 50
 )
 
@@ -43,7 +43,7 @@ func (hp *HTTPPool) Log(format string, v ...interface{}) {
 func (hp *HTTPPool) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	hp.Log("%s %s", r.Method, r.URL.Path)
 
-	// Serve only '/mayflycache/*' requests
+	// Serve only '/_mayflycache/*' requests
 	if !strings.HasPrefix(r.URL.Path, hp.basePath) {
 		http.Error(w, "HTTPPool serving unexpected path:"+r.URL.Path, http.StatusBadRequest)
 		return

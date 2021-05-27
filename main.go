@@ -69,9 +69,9 @@ func main() {
 	}
 
 	cache := createGroup()
-	startCacheServer(addrMap[port], addrs, cache)
 	if api {
 		apiAddr := "http://localhost:9999"
 		go startAPIServer(apiAddr, cache)
 	}
+	startCacheServer(addrMap[port], addrs, cache)
 }
